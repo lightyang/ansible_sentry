@@ -21,4 +21,4 @@ sentry_image: sentry:8.6
 sentry_postgres_image: postgres:9.5
 sentry_redis_image: redis:3.2.1
 sentry_smtp_image: tianon/exim4
-sentry_docker_run: docker run --rm -e SENTRY_SECRET_KEY='{{sentry_secret}}' --link sentry-postgres:postgres --link sentry-redis:redis -i {{ sentry_image }}
+sentry_docker_run: docker run --rm -e SENTRY_SECRET_KEY='{{ sentry_secret }}' --link sentry-postgres:postgres --link sentry-redis:redis -i {{ sentry_image }}

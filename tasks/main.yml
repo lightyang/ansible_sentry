@@ -86,16 +86,16 @@
       SENTRY_SERVER_EMAIL: "{{ sentry_server_email }}"
     command: run {{ item.command }}
     restart: "{{ copy_conf.changed or sentry_force_restart }}"
+    recreate: "{{ run_postgres.changed or run_redis.changed or run_smtp.changed }}"
   with_items:
     - name: sentry-web
       ports:
-        - "{{ sentry_web_port }}:9000"
+        - "{{ sentry_web_port }}:{{ sentry_web_port }}"
       command: web
     - name: sentry-worker
       command: worker
     - name: sentry-cron
       command: cron
-  recreate: "{{ run_postgres.changed or run_redis.changed or run_smtp.changed }}"
 
 - name: add cron job to perform cleanup
   cron: name="sentry cleanup" minute=0 hour=1 job="docker exec -i sentry-web sentry cleanup"

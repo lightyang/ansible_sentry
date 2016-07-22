@@ -90,7 +90,7 @@
   with_items:
     - name: sentry-web
       ports:
-        - "{{ sentry_web_port }}:{{ sentry_web_port }}"
+        - "{{ sentry_web_port }}:9000"
       command: web
     - name: sentry-worker
       command: worker

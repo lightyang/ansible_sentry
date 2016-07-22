@@ -16,6 +16,7 @@ sentry_admin_email: admin@example.com
 sentry_admin_password: password
 sentry_server_email: sentry@example.com
 sentry_time_zone: "Asia/Singapore"
+sentry_allow_registration: true
 
 sentry_image: sentry:8.6
 sentry_postgres_image: postgres:9.5

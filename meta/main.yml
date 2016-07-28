@@ -1,2 +1,2 @@
 dependencies:
-  - ansible-docker-common
+  - ansible_docker_common

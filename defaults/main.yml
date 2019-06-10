@@ -18,7 +18,7 @@ sentry_server_email: sentry@example.com
 sentry_time_zone: "Asia/Singapore"
 sentry_allow_registration: true
 
-sentry_image: sentry:8.6
+sentry_image: sentry:9.1.1
 sentry_postgres_image: postgres:9.5
 sentry_redis_image: redis:3.2.1
 sentry_smtp_image: tianon/exim4

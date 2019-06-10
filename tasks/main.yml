@@ -53,7 +53,7 @@
 
 - name: wait for components to start up
   pause: seconds=5
-  when: sentry_install
+  when: sentry_install|bool
 
 - name: upgrade db
   when: sentry_upgrade or sentry_install
@@ -63,7 +63,7 @@
     | {{ sentry_docker_run }} upgrade
 
 - name: create admin user
-  when: sentry_install
+  when: sentry_install|bool
   shell: >
     echo "{{ sentry_admin_email }}\n{{ sentry_admin_password }}\n{{ sentry_admin_password }}\ny\n"
     | sed 's/\\n/\n/g'

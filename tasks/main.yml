@@ -12,7 +12,7 @@
     etype: user
     permissions: rwx
     state: present
-  when: "{{ sentry_docker_uid is defined }}"
+  when: sentry_docker_uid is defined
 
 - name: copy conf
   template: src={{ item }} dest={{ sentry_conf_dir }}/{{ item | regex_replace('\\.j2', '') }}

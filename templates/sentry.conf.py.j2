@@ -29,14 +29,19 @@
 #  SENTRY_MAILGUN_API_KEY
 #  SENTRY_SINGLE_ORGANIZATION
 #  SENTRY_SECRET_KEY
+#  SLACK_CLIENT_ID
+#  SLACK_CLIENT_SECRET
+#  SLACK_VERIFICATION_TOKEN
+#  GITHUB_APP_ID
+#  GITHUB_API_SECRET
+#  BITBUCKET_CONSUMER_KEY
+#  BITBUCKET_CONSUMER_SECRET
 from sentry.conf.server import *  # NOQA
-from sentry.utils.types import Bool
 
 import os
 import os.path
 
 CONF_ROOT = os.path.dirname(__file__)
-env = os.environ.get
 
 postgres = env('SENTRY_POSTGRES_HOST') or (env('POSTGRES_PORT_5432_TCP_ADDR') and 'postgres')
 if postgres:
@@ -82,7 +87,7 @@ SENTRY_USE_BIG_INTS = True
 
 # Instruct Sentry that this install intends to be run by a single organization
 # and thus various UI optimizations should be enabled.
-SENTRY_SINGLE_ORGANIZATION = Bool(env('SENTRY_SINGLE_ORGANIZATION', True))
+SENTRY_SINGLE_ORGANIZATION = env('SENTRY_SINGLE_ORGANIZATION', True)
 
 #########
 # Redis #
@@ -218,10 +223,10 @@ SENTRY_DIGESTS = 'sentry.digests.backends.redis.RedisBackend'
 # File storage #
 ################
 
-# Any Django storage backend is compatible with Sentry. For more solutions see
-# the django-storages package: https://django-storages.readthedocs.io/en/latest/
+# Uploaded media uses these `filestore` settings. The available
+# backends are either `filesystem` or `s3`.
 
-SENTRY_OPTIONS['filestore.backend'] = 'django.core.files.storage.FileSystemStorage'
+SENTRY_OPTIONS['filestore.backend'] = 'filesystem'
 SENTRY_OPTIONS['filestore.options'] = {
     'location': env('SENTRY_FILESTORE_DIR'),
 }
@@ -233,13 +238,14 @@ SENTRY_OPTIONS['filestore.options'] = {
 # If you're using a reverse SSL proxy, you should enable the X-Forwarded-Proto
 # header and set `SENTRY_USE_SSL=1`
 
-if Bool(env('SENTRY_USE_SSL', False)):
+if env('SENTRY_USE_SSL', False):
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
 SENTRY_WEB_HOST = '0.0.0.0'
-SENTRY_WEB_PORT = "9000"
+SENTRY_WEB_PORT = 9000
 SENTRY_WEB_OPTIONS = {
     # 'workers': 3,  # the number of web workers
 }
@@ -260,7 +266,7 @@ if email:
     SENTRY_OPTIONS['mail.password'] = env('SENTRY_EMAIL_PASSWORD') or ''
     SENTRY_OPTIONS['mail.username'] = env('SENTRY_EMAIL_USER') or ''
     SENTRY_OPTIONS['mail.port'] = int(env('SENTRY_EMAIL_PORT') or 25)
-    SENTRY_OPTIONS['mail.use-tls'] = Bool(env('SENTRY_EMAIL_USE_TLS', False))
+    SENTRY_OPTIONS['mail.use-tls'] = env('SENTRY_EMAIL_USE_TLS', False)
 else:
     SENTRY_OPTIONS['mail.backend'] = 'dummy'
 
@@ -275,10 +281,19 @@ SENTRY_OPTIONS['mail.mailgun-api-key'] = env('SENTRY_MAILGUN_API_KEY') or ''
 if SENTRY_OPTIONS['mail.mailgun-api-key']:
     SENTRY_OPTIONS['mail.enable-replies'] = True
 else:
-    SENTRY_OPTIONS['mail.enable-replies'] = Bool(env('SENTRY_ENABLE_EMAIL_REPLIES', False))
+    SENTRY_OPTIONS['mail.enable-replies'] = env('SENTRY_ENABLE_EMAIL_REPLIES', False)
 
 if SENTRY_OPTIONS['mail.enable-replies']:
     SENTRY_OPTIONS['mail.reply-hostname'] = env('SENTRY_SMTP_HOSTNAME') or ''
+
+#####################
+# SLACK INTEGRATION #
+#####################
+slack = env('SLACK_CLIENT_ID') and env('SLACK_CLIENT_SECRET')
+if slack:
+    SENTRY_OPTIONS['slack.client-id'] = env('SLACK_CLIENT_ID')
+    SENTRY_OPTIONS['slack.client-secret'] = env('SLACK_CLIENT_SECRET')
+    SENTRY_OPTIONS['slack.verification-token'] = env('SLACK_VERIFICATION_TOKEN') or ''
 
 # If this value ever becomes compromised, it's important to regenerate your
 # SENTRY_SECRET_KEY. Changing this value will result in all current sessions
@@ -296,3 +311,63 @@ if 'SENTRY_RUNNING_UWSGI' not in os.environ and len(secret_key) < 32:
     print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
 SENTRY_OPTIONS['system.secret-key'] = secret_key
+
+if 'GITHUB_APP_ID' in os.environ:
+    GITHUB_EXTENDED_PERMISSIONS = ['repo']
+    GITHUB_APP_ID = env('GITHUB_APP_ID')
+    GITHUB_API_SECRET = env('GITHUB_API_SECRET')
+
+if 'BITBUCKET_CONSUMER_KEY' in os.environ:
+    BITBUCKET_CONSUMER_KEY = env('BITBUCKET_CONSUMER_KEY')
+    BITBUCKET_CONSUMER_SECRET = env('BITBUCKET_CONSUMER_SECRET')
+
+#####################
+# LDAP INTEGRATION #
+#####################
+import ldap
+from django_auth_ldap.config import LDAPSearch, GroupOfUniqueNamesType
+
+AUTH_LDAP_SERVER_URI = '{{ sentry_ldap_uri }}'
+AUTH_LDAP_USER_DN_TEMPLATE = '{{ sentry_ldap_user_dn_template }}'
+
+AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
+    '',
+    ldap.SCOPE_SUBTREE,
+    '(objectClass=groupOfUniqueNames)'
+)
+
+AUTH_LDAP_GROUP_TYPE = GroupOfUniqueNamesType()
+AUTH_LDAP_REQUIRE_GROUP = None
+AUTH_LDAP_DENY_GROUP = None
+
+AUTH_LDAP_USER_ATTR_MAP = {
+    'username': 'cn',
+    'name': 'cn',
+    'email': 'mail'
+}
+
+AUTH_LDAP_FIND_GROUP_PERMS = False
+AUTH_LDAP_CACHE_GROUPS = True
+AUTH_LDAP_GROUP_CACHE_TIMEOUT = 3600
+
+AUTH_LDAP_DEFAULT_SENTRY_ORGANIZATION = '{{ sentry_ldap_org }}'
+AUTH_LDAP_SENTRY_ORGANIZATION_ROLE_TYPE = '{{ sentry_ldap_role }}'
+AUTH_LDAP_SENTRY_ORGANIZATION_GLOBAL_ACCESS = '{{ sentry_ldap_global_access }}'
+AUTH_LDAP_SENTRY_SUBSCRIBE_BY_DEFAULT = False
+
+SENTRY_MANAGED_USER_FIELDS = ('username', 'email', 'password',)
+
+AUTHENTICATION_BACKENDS = AUTHENTICATION_BACKENDS + (
+    'sentry_ldap_auth.backend.SentryLdapBackend',
+)
+
+# import logging
+# logger = logging.getLogger('django_auth_ldap')
+# logger.addHandler(logging.StreamHandler())
+# logger.setLevel('DEBUG')
+
+# LOGGING['overridable'] = ['sentry', 'django_auth_ldap']
+# LOGGING['loggers']['django_auth_ldap'] = {
+#     'handlers': ['console'],
+#     'level': 'DEBUG'
+# }
